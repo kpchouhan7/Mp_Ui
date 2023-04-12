@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Español</title>
+    <style>
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #f2f2f2;
+		}
+		h1 {
+			text-align: center;
+			margin-top: 50px;
+			color: #333;
+		}
+		form {
+			margin: 50px auto;
+			padding: 20px;
+			background-color: #fff;
+			max-width: 500px;
+			border-radius: 5px;
+			box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.3);
+		}
+		label {
+			display: block;
+			margin-bottom: 10px;
+			color: #333;
+			font-weight: bold;
+		}
+		input[type="file"] {
+			display: block;
+			margin-bottom: 10px;
+			color: #333;
+			padding: 5px;
+			border-radius: 3px;
+			border: 1px solid #ccc;
+			background-color: #f9f9f9;
+			box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.1);
+		}
+		input[type="text"] {
+			display: block;
+			margin-bottom: 10px;
+			color: #333;
+			padding: 5px;
+			border-radius: 3px;
+			border: 1px solid #ccc;
+			background-color: #f9f9f9;
+			box-shadow: 0px 0px 3px rgba(0, 0, 0, 0.1);
+			width: 100%;
+			box-sizing: border-box;
+		}
+		button[type="submit"] {
+			background-color: #333;
+			color: #fff;
+			border: none;
+			border-radius: 3px;
+			padding: 10px 20px;
+			cursor: pointer;
+			font-size: 16px;
+			font-weight: bold;
+			transition: background-color 0.2s;
+		}
+		button[type="submit"]:hover {
+			background-color: #555;
+		}
+	</style>
+</head>
+<body>
+    <h1>Welcome to Spanish page</h1>
+	<form id="recording-form" method="post" enctype="multipart/form-data">
+		{% csrf_token %}
+		<label for="record-audio">Record audio:</label>
+		<button type="button" onclick="startRecording()">Start</button>
+		<button type="button" onclick="stopRecording()">Stop</button>
+		<audio id="audio-player"></audio><br><br>
+		
+		<label for="audio-input">Audio input:</label>
+		<input type="file" id="audio-input" name="audio-input"><br><br>
+		
+		<label for="text-input">Text input:</label>
+		<input type="text" id="text-input" name="text-input"><br><br>
+		
+		<button type="submit">Submit</button>
+	</form>
+	<script>
+		var mediaRecorder;
+		var chunks = [];
+
+		function startRecording() {
+			navigator.mediaDevices.getUserMedia({audio: true})
+				.then(function(stream) {
+					mediaRecorder = new MediaRecorder(stream);
+					mediaRecorder.start();
+
+					mediaRecorder.ondataavailable = function(e) {
+						chunks.push(e.data);
+					}
+
+					mediaRecorder.onstop = function(e) {
+						var blob = new Blob(chunks, { 'type' : 'audio/wav; codecs=opus' });
+						var audioURL = window.URL.createObjectURL(blob);
+						var audioPlayer = document.getElementById('audio-player');
+						audioPlayer.src = audioURL;
+					}
+				})
+				.catch(function(err) {
+					console.log('The following error occurred: ' + err);
+				});
+		}
+
+		function stopRecording() {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                  chunks = [];
+               }
+               console.log("stopped")
+		}
+        function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+		var form = document.getElementById('recording-form');
+		form.addEventListener('submit', function(e) {
+            console.log('yes')
+			e.preventDefault();
+			var formData = new FormData();
+			formData.append('text-input', document.getElementById('text-input').value);
+			var audioBlob = new Blob(chunks, { 'type' : 'audio/wav; codecs=opus' });
+			formData.append('recorded_audio', audioBlob, 'recorded_audio.wav');
+			var xhr = new XMLHttpRequest();
+            console.log("fine")
+			xhr.open('POST', '{% url "english" %}');
+            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'));
+			xhr.onload = function() {
+				if (xhr.status === 200) {
+					console.log('Audio saved successfully');
+				} else {
+					console.log('Error saving audio');
+				}
+			};
+			xhr.send(formData);
+		});
+	</script>
+</body>
+</html>
